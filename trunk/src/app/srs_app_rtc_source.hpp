@@ -285,7 +285,7 @@ private:
 
 class SrsRtmpFromRtcBridge : public ISrsRtcSourceBridge
 {
-private:
+protected:
     SrsLiveSource *source_;
     SrsAudioTranscoder *codec_;
     bool is_first_audio;
@@ -311,12 +311,12 @@ public:
     SrsRtmpFromRtcBridge(SrsLiveSource *src);
     virtual ~SrsRtmpFromRtcBridge();
 public:
-    srs_error_t initialize(SrsRequest* r);
+    virtual srs_error_t initialize(SrsRequest* r);
 public:
     virtual srs_error_t on_publish();
     virtual srs_error_t on_rtp(SrsRtpPacket *pkt);
     virtual void on_unpublish();
-private:
+public:
     srs_error_t transcode_audio(SrsRtpPacket *pkt);
     void packet_aac(SrsCommonMessage* audio, char* data, int len, uint32_t pts, bool is_header);
     srs_error_t packet_video(SrsRtpPacket* pkt);
@@ -512,7 +512,7 @@ public:
 
 class SrsRtcRecvTrack
 {
-protected:
+public:
     SrsRtcTrackDescription* track_desc_;
 protected:
     SrsRtcConnection* session_;

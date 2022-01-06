@@ -1123,6 +1123,51 @@ SrsRtcPublishStream::~SrsRtcPublishStream()
     stat->on_disconnect(cid_.c_str());
 }
 
+#ifdef SRS_FFMPEG_FIT
+inline SrsRtmpFromRtcBridge* create_bridge(SrsLiveSource *rtmp) {
+    return new SrsRtmpFromRtcBridge(rtmp);
+}
+
+extern SrsRtmpFromRtcBridge* create_bridge(std::vector<SrsRtcVideoRecvTrack*>& video_tracks);
+
+srs_error_t do_bridge_for_simulcast(SrsRtmpFromRtcBridge *&bridge, SrsRequest* r, std::vector<SrsRtcVideoRecvTrack*>& video_tracks) {
+    srs_error_t err = srs_success;
+    bridge = create_bridge(video_tracks);
+    if ((err = bridge->initialize(r)) != srs_success) {
+        srs_freep(bridge);
+        return srs_error_wrap(err, "create bridge");
+    }
+    return err;
+}
+
+srs_error_t do_bridge_for_single(SrsRtmpFromRtcBridge *&bridge, SrsRequest *r) {
+    srs_error_t err = srs_success;
+    SrsLiveSource *rtmp = NULL;
+    if ((err = _srs_sources->fetch_or_create(r, _srs_hybrid->srs()->instance(), &rtmp)) != srs_success) {
+        return srs_error_wrap(err, "create source");
+    }
+
+    // Disable GOP cache for RTC2RTMP bridge, to keep the streams in sync,
+    // especially for stream merging.
+    rtmp->set_cache(false);
+
+    bridge = create_bridge(rtmp);
+    if ((err = bridge->initialize(r)) != srs_success) {
+        srs_freep(bridge);
+        return srs_error_wrap(err, "create bridge");
+    }
+    return err;
+}
+
+srs_error_t do_bridge(SrsRtmpFromRtcBridge *&bridge, SrsRequest* r, std::vector<SrsRtcVideoRecvTrack*>& video_tracks) {
+    if (video_tracks.size() > 1) {
+        return do_bridge_for_simulcast(bridge, r, video_tracks);
+    } else {
+        return do_bridge_for_single(bridge, r);
+    }
+}
+#endif
+
 srs_error_t SrsRtcPublishStream::initialize(SrsRequest* r, SrsRtcSourceDescription* stream_desc)
 {
     srs_error_t err = srs_success;
@@ -1200,18 +1245,9 @@ srs_error_t SrsRtcPublishStream::initialize(SrsRequest* r, SrsRtcSourceDescripti
 #if defined(SRS_RTC) && defined(SRS_FFMPEG_FIT)
     bool rtc_to_rtmp = _srs_config->get_rtc_to_rtmp(req_->vhost);
     if (rtc_to_rtmp) {
-        if ((err = _srs_sources->fetch_or_create(r, _srs_hybrid->srs()->instance(), &rtmp)) != srs_success) {
-            return srs_error_wrap(err, "create source");
-        }
-
-        // Disable GOP cache for RTC2RTMP bridge, to keep the streams in sync,
-        // especially for stream merging.
-        rtmp->set_cache(false);
-
-        SrsRtmpFromRtcBridge *bridge = new SrsRtmpFromRtcBridge(rtmp);
-        if ((err = bridge->initialize(r)) != srs_success) {
-            srs_freep(bridge);
-            return srs_error_wrap(err, "create bridge");
+        SrsRtmpFromRtcBridge *bridge = NULL;
+        if ((err = do_bridge(bridge, r, video_tracks_)) != srs_success) {
+            return srs_error_wrap(err, "do_bridge");
         }
 
         source->set_bridge(bridge);
