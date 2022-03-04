@@ -1687,7 +1687,8 @@ srs_error_t SrsRtmpFromRtcBridge::packet_video_rtmp(const uint16_t start, const 
     }
 
     if ((err = source_->on_video(&rtmp)) != srs_success) {
-        srs_warn("fail to pack video frame");
+        srs_warn("fail to pack video frame: %s", srs_error_desc(err).c_str());
+        srs_error_reset(err);
     }
 
     header_sn_ = end + 1;
