@@ -436,13 +436,13 @@ public:
     // Deep copy the request, for source to use it to support reload,
     // For when initialize the source, the request is valid,
     // When reload it, the request maybe invalid, so need to copy it.
-    virtual SrsRequest* copy();
+    virtual SrsRequest* copy() const;
     // update the auth info of request,
     // To keep the current request ptr is ok,
     // For many components use the ptr of request.
     virtual void update_auth(SrsRequest* req);
     // Get the stream identify, vhost/app/stream.
-    virtual std::string get_stream_url();
+    virtual std::string get_stream_url() const;
     // To strip url, user must strip when update the url.
     virtual void strip();
 public:

@@ -1531,7 +1531,7 @@ SrsRequest::~SrsRequest()
     srs_freep(args);
 }
 
-SrsRequest* SrsRequest::copy()
+SrsRequest* SrsRequest::copy() const
 {
     SrsRequest* cp = new SrsRequest();
     
@@ -1586,7 +1586,7 @@ void SrsRequest::update_auth(SrsRequest* req)
     srs_info("update req of soruce for auth ok");
 }
 
-string SrsRequest::get_stream_url()
+string SrsRequest::get_stream_url() const
 {
     return srs_generate_stream_url(vhost, app, stream);
 }
